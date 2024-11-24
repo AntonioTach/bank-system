@@ -5,288 +5,19 @@
 #include <algorithm>
 #include <map>
 
+// CLASES
+#include "Transaccion.h"
+#include "Cuenta.h"
+#include "Usuario.h"
+#include "Cola.h"
+#include "Pila.h"
+#include "Grafo.h"
+#include "ListaEstatica.h"
+
 // Angel Alberto Campos Pelayo
-// Antonio Viña Hernandez
+// Antonio ViÃ±a Hernandez
 
 using namespace std;
-
-// Clase para manejar transacciones
-class Transaccion {
-public:
-    string tipo;  // Tipo de transacción: "Deposito", "Retiro", "Transferencia"
-    double monto;
-    string fecha;
-    int numeroCuenta;  // Para depósitos y retiros
-    int numeroCuentaOrigen;  // Para transferencias
-    int numeroCuentaDestino;  // Para transferencias
-
-    Transaccion(const string& tipo, double monto, const string& fecha, int numeroCuenta, int numeroCuentaOrigen = 0, int numeroCuentaDestino = 0)
-        : tipo(tipo), monto(monto), fecha(fecha), numeroCuenta(numeroCuenta), numeroCuentaOrigen(numeroCuentaOrigen), numeroCuentaDestino(numeroCuentaDestino) {}
-
-    void mostrarTransaccion() const {
-        cout << tipo << ": $" << monto << " en fecha " << fecha << endl;
-    }
-};
-
-// Clase para manejar las cuentas bancarias
-class Cuenta {
-public:
-    int numeroCuenta;
-    double saldo;
-    vector<Transaccion> historialTransacciones;
-
-    Cuenta(int numero, double saldoInicial) : numeroCuenta(numero), saldo(saldoInicial) {}
-
-    void depositar(double monto, const string& fecha) {
-    if (monto <= 0) {
-        cout << "El monto debe ser mayor que cero.\n";
-        return;
-    }
-    saldo += monto;
-    historialTransacciones.push_back(Transaccion("Deposito", monto, fecha, numeroCuenta));
-}
-
-
-    void retirar(double monto, const string& fecha) {
-    if (monto <= 0) {
-        cout << "El monto debe ser mayor que cero.\n";
-        return;
-    }
-    if (monto <= saldo) {
-        saldo -= monto;
-        historialTransacciones.push_back(Transaccion("Retiro", monto, fecha, numeroCuenta));
-    } else {
-        cout << "Saldo insuficiente para el retiro.\n";
-    }
-}
-
-
-    void mostrarHistorial() const {
-    cout << "Historial de Transacciones de la cuenta " << numeroCuenta << ":\n";
-    for (const auto& t : historialTransacciones) {
-        t.mostrarTransaccion();
-    }
-}
-
-
-    double obtenerSaldo() const {
-        return saldo;
-    }
-
-    void transferir(double monto, Cuenta* cuentaDestino, const string& fecha) {
-    if (monto <= 0) {
-        cout << "El monto debe ser mayor que cero.\n";
-        return;
-    }
-    if (monto <= saldo) {
-        saldo -= monto;
-        cuentaDestino->depositar(monto, fecha);  // Depósito en la cuenta destino
-        historialTransacciones.push_back(Transaccion("Transferencia", monto, fecha, numeroCuenta, numeroCuenta, cuentaDestino->numeroCuenta));
-        cout << "Transferencia exitosa de $" << monto << " a la cuenta " << cuentaDestino->numeroCuenta << ".\n";
-    } else {
-        cout << "Saldo insuficiente para la transferencia.\n";
-    }
-}
-
-    Cuenta* buscarCuentaLineal(const vector<Cuenta*>& cuentas, int numeroCuenta) {
-    for (Cuenta* cuenta : cuentas) {
-        if (cuenta->numeroCuenta == numeroCuenta) {
-            return cuenta;
-        }
-    }
-    return nullptr;  // Cuenta no encontrada
-}
-};
-
-// Clase para manejar los usuarios
-class Usuario {
-public:
-    string nombre;
-    string direccion;
-    vector<Cuenta*> cuentas;  // Un usuario puede tener varias cuentas
-
-    Usuario(string nombre, string direccion) : nombre(nombre), direccion(direccion) {}
-
-    void agregarCuenta(Cuenta* cuenta) {
-        cuentas.push_back(cuenta);
-    }
-
-    void leerMontoYFecha(double &monto, string &fecha) {
-    cout << "Ingrese monto: ";
-    cin >> monto;
-    cout << "Ingrese fecha (dd/mm/aaaa): ";
-    cin >> fecha;
-}
-
-    int leerNumeroCuenta() {
-    int numeroCuenta;
-    cout << "Ingrese número de cuenta: ";
-    cin >> numeroCuenta;
-    return numeroCuenta;
-}
-
-    void abrirCuenta(Usuario* usuario) {
-    int numeroCuenta = leerNumeroCuenta();
-    double saldoInicial;
-    cout << "Ingrese saldo inicial: ";
-    cin >> saldoInicial;
-    Cuenta* nuevaCuenta = new Cuenta(numeroCuenta, saldoInicial);
-    usuario->agregarCuenta(nuevaCuenta);
-    cout << "Cuenta creada exitosamente.\n";
-}
-
-    void mostrarCuentas() const {
-        cout << "Cuentas de " << nombre << ":\n";
-        for (const auto& cuenta : cuentas) {
-            cout << "Cuenta No. " << cuenta->numeroCuenta << " con saldo $" << cuenta->obtenerSaldo() << endl;
-        }
-    }
-};
-
-// Clase para manejar las pilas (operaciones deshacer)
-template <typename T>
-class Pila {
-private:
-    vector<Transaccion> transacciones;
-public:
-    void apilar(const Transaccion& transaccion) {
-        transacciones.push_back(transaccion);
-    }
-
-    Transaccion desapilar() {
-        if (!estaVacia()) {
-            Transaccion t = transacciones.back();
-            transacciones.pop_back();
-            return t;
-        }
-        throw runtime_error("Pila vacía");
-    }
-
-    bool estaVacia() const {
-        return transacciones.empty();
-    }
-
-    Transaccion verUltima() const {
-        if (!estaVacia()) {
-            return transacciones.back();
-        }
-        throw runtime_error("Pila vacía");
-    }
-};
-
-// Clase para manejar las colas (transacciones pendientes)
-template <typename T>  // Esto hace que la clase sea una plantilla para cualquier tipo T
-class Cola {
-private:
-    struct Nodo {
-        T dato;
-        Nodo* siguiente;
-
-        Nodo(const T& dato) : dato(dato), siguiente(nullptr) {}
-    };
-
-    Nodo* frente;
-    Nodo* final;
-
-public:
-    Cola() : frente(nullptr), final(nullptr) {}
-
-    ~Cola() {
-        while (frente != nullptr) {
-            Nodo* temp = frente;
-            frente = frente->siguiente;
-            delete temp;
-        }
-    }
-
-    void encolar(const T& dato) {
-        Nodo* nuevo = new Nodo(dato);
-        if (final != nullptr) {
-            final->siguiente = nuevo;
-        } else {
-            frente = nuevo;
-        }
-        final = nuevo;
-    }
-
-    T desencolar() {
-        if (frente != nullptr) {
-            Nodo* temp = frente;
-            T dato = frente->dato;
-            frente = frente->siguiente;
-            if (frente == nullptr) {
-                final = nullptr;
-            }
-            delete temp;
-            return dato;
-        }
-        throw underflow_error("Cola vacía");
-    }
-
-    bool estaVacia() const {
-        return frente == nullptr;
-    }
-};
-
-// Clase Lista estática para manejar cuentas de usuarios
-template <typename T>
-class ListaEstatica {
-private:
-    T* elementos;
-    int capacidad;
-    int tamano;
-
-public:
-    ListaEstatica(int capacidad) : capacidad(capacidad), tamano(0) {
-        elementos = new T[capacidad];
-    }
-
-    ~ListaEstatica() {
-        delete[] elementos;
-    }
-
-    void agregar(const T& elemento) {
-        if (tamano < capacidad) {
-            elementos[tamano++] = elemento;
-        } else {
-            cout << "Lista estática llena.\n";
-        }
-    }
-
-    T obtener(int indice) const {
-        if (indice >= 0 && indice < tamano) {
-            return elementos[indice];
-        }
-        throw out_of_range("Índice fuera de rango");
-    }
-
-    int getTamano() const {
-        return tamano;
-    }
-};
-
-// Clase Grafo (esquemática para representar la relación entre cuentas o usuarios)
-class Grafo {
-public:
-    map<int, vector<int>> adjList;  // Representación de un grafo como lista de adyacencia
-
-    // Agregar una relación entre dos cuentas (ej., deudas o transferencias)
-    void agregarRelacion(int cuentaOrigen, int cuentaDestino) {
-        adjList[cuentaOrigen].push_back(cuentaDestino);
-    }
-
-    // Mostrar todas las relaciones de un usuario
-    void mostrarRelaciones(int cuenta) {
-        if (adjList.find(cuenta) != adjList.end()) {
-            cout << "Relaciones para la cuenta " << cuenta << ":\n";
-            for (int destino : adjList[cuenta]) {
-                cout << "- Cuenta " << destino << endl;
-            }
-        } else {
-            cout << "No hay relaciones para la cuenta " << cuenta << ".\n";
-        }
-    }
-};
 
 // Funciones auxiliares para manejar usuarios
 void cargarUsuariosDesdeArchivo(vector<Usuario*>& usuarios){
@@ -319,7 +50,7 @@ Usuario* buscarUsuarioLineal(const vector<Usuario*>& usuarios, const string& nom
 
 // Funciones auxiliares para manejar cuentas
 void ordenarCuentasPorNumeroCuenta(vector<Cuenta*>& cuentas){
-    sort(cuentas.begin(), cuentas.end(), [](Cuenta* a, Cuenta* b) { //algoritmo de ordenación
+    sort(cuentas.begin(), cuentas.end(), [](Cuenta* a, Cuenta* b) { //algoritmo de ordenaciï¿½n
         return a->numeroCuenta < b->numeroCuenta;  // Ordena en orden ascendente
     });
 }
@@ -334,7 +65,7 @@ void ordenarCuentasBurbuja(vector<Cuenta*>& cuentas){
                 intercambio = true;
             }
         }
-        if (!intercambio) break;  // Si no hubo intercambio, la lista ya está ordenada
+        if (!intercambio) break;  // Si no hubo intercambio, la lista ya estï¿½ ordenada
     }
 }
 void ordenarCuentasSeleccion(vector<Cuenta*>& cuentas){
@@ -345,7 +76,7 @@ void ordenarCuentasSeleccion(vector<Cuenta*>& cuentas){
                 minIndex = j;
             }
         }
-        // Intercambiar la cuenta mínima con la primera no ordenada
+        // Intercambiar la cuenta mï¿½nima con la primera no ordenada
         swap(cuentas[i], cuentas[minIndex]);
     }
 }
@@ -408,28 +139,51 @@ void buscarTransaccionesPorFecha(const Cuenta& cuenta, const string& fecha){
 // Funciones auxiliares generales
 void deshacerUltimaOperacion(Pila<Transaccion>& pila){
     if (!pila.estaVacia()) {
-        Transaccion t = pila.desapilar();  // Obtener la última transacción
-        // Deshacer la operación según el tipo de transacción (deposición, retiro, etc.)
-        cout << "Operación deshecha: " << t.tipo << " de $" << t.monto << endl;
+        Transaccion t = pila.desapilar();  // Obtener la ï¿½ltima transacciï¿½n
+        // Deshacer la operaciï¿½n segï¿½n el tipo de transacciï¿½n (deposiciï¿½n, retiro, etc.)
+        cout << "Operaciï¿½n deshecha: " << t.tipo << " de $" << t.monto << endl;
     } else {
         cout << "No hay operaciones recientes para deshacer.\n";
     }
 }
+
+
 void mostrarMenu(){
-    cout << "\n=== Menú Bancario ===\n";
+    cout << "\n=== Menu Bancario ===\n";
     cout << "1. Abrir cuenta\n";
-    cout << "2. Realizar depósito\n";
+    cout << "2. Realizar depï¿½sito\n";
     cout << "3. Realizar retiro\n";
     cout << "4. Transferir dinero\n";
     cout << "5. Ver historial de transacciones\n";
-    cout << "6. Deshacer última operación\n";
+    cout << "6. Deshacer ï¿½ltima operaciï¿½n\n";
     cout << "7. Ver relaciones entre cuentas\n";
     cout << "8. Salir\n";
-    cout << "Seleccione una opción: ";
+    cout << "Seleccione una opciï¿½n: ";
 }
 
-// Función principal
+// Funcion principal
 int main() {
+    // menu();
+    // TEST MODULOS
+    // Crear un usuario
+    Usuario usuario("Juan Perez", "Calle Falsa 123");
+
+    // Crear una cuenta y agregarla al usuario
+    Cuenta* cuenta = new Cuenta(1001, 500.0); // NÃºmero de cuenta: 1001, Saldo inicial: 500
+    usuario.agregarCuenta(cuenta);
+
+    // Realizar un depÃ³sito en la cuenta
+    cuenta->depositar(200.0, "23/11/2024");
+
+    // Mostrar las cuentas del usuario y su saldo actualizado
+    usuario.mostrarCuentas();
+
+    delete cuenta;
+
+    return 0;
+}
+
+int menu() { // MENU DE OPCIONES
     vector<Usuario*> usuarios;
     Pila<Transaccion> pilaTransacciones;
     Grafo grafo;
@@ -449,7 +203,7 @@ int main() {
                 // Abrir cuenta
                 int numeroCuenta;
                 double saldoInicial;
-                cout << "Ingrese número de cuenta: ";
+                cout << "Ingrese nï¿½mero de cuenta: ";
                 cin >> numeroCuenta;
                 cout << "Ingrese saldo inicial: ";
                 cin >> saldoInicial;
@@ -459,11 +213,11 @@ int main() {
                 break;
             }
             case 2: {
-                // Realizar depósito
+                // Realizar depï¿½sito
                 int numeroCuenta;
                 double monto;
                 string fecha;
-                cout << "Ingrese número de cuenta: ";
+                cout << "Ingrese nï¿½mero de cuenta: ";
                 cin >> numeroCuenta;
                 cout << "Ingrese monto a depositar: ";
                 cin >> monto;
@@ -472,7 +226,7 @@ int main() {
                 Cuenta* cuenta = buscarCuentaBinaria(usuario->cuentas, numeroCuenta);
                 if (cuenta != nullptr) {
                     cuenta->depositar(monto, fecha);
-                    cout << "Depósito realizado.\n";
+                    cout << "Depï¿½sito realizado.\n";
                 } else {
                     cout << "Cuenta no encontrada.\n";
                 }
@@ -483,7 +237,7 @@ int main() {
                 int numeroCuenta;
                 double monto;
                 string fecha;
-                cout << "Ingrese número de cuenta: ";
+                cout << "Ingrese nï¿½mero de cuenta: ";
                 cin >> numeroCuenta;
                 cout << "Ingrese monto a retirar: ";
                 cin >> monto;
@@ -503,9 +257,9 @@ int main() {
                 int numeroCuentaOrigen, numeroCuentaDestino;
                 double monto;
                 string fecha;
-                cout << "Ingrese número de cuenta origen: ";
+                cout << "Ingrese nï¿½mero de cuenta origen: ";
                 cin >> numeroCuentaOrigen;
-                cout << "Ingrese número de cuenta destino: ";
+                cout << "Ingrese nï¿½mero de cuenta destino: ";
                 cin >> numeroCuentaDestino;
                 cout << "Ingrese monto a transferir: ";
                 cin >> monto;
@@ -529,58 +283,58 @@ int main() {
                 break;
             }
             case 6: {
-    // Deshacer la última operación (última transacción)
-    if (!pilaTransacciones.estaVacia()) {
-        Transaccion ultimaTransaccion = pilaTransacciones.desapilar(); // Desapilamos la última transacción
+            // Deshacer la ï¿½ltima operaciï¿½n (ï¿½ltima transacciï¿½n)
+            if (!pilaTransacciones.estaVacia()) {
+                Transaccion ultimaTransaccion = pilaTransacciones.desapilar(); // Desapilamos la ï¿½ltima transacciï¿½n
 
-        // Lógica para deshacer la operación
-        if (ultimaTransaccion.tipo == "Deposito") {
-            Cuenta* cuenta = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuenta);
-            if (cuenta) {
-                cuenta->saldo -= ultimaTransaccion.monto;  // Deshacer el depósito
-                cout << "Depósito de $" << ultimaTransaccion.monto << " deshecho en cuenta " << ultimaTransaccion.numeroCuenta << ".\n";
+                // Lï¿½gica para deshacer la operaciï¿½n
+                if (ultimaTransaccion.tipo == "Deposito") {
+                    Cuenta* cuenta = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuenta);
+                    if (cuenta) {
+                        cuenta->saldo -= ultimaTransaccion.monto;  // Deshacer el depï¿½sito
+                        cout << "Depï¿½sito de $" << ultimaTransaccion.monto << " deshecho en cuenta " << ultimaTransaccion.numeroCuenta << ".\n";
+                    }
+                } else if (ultimaTransaccion.tipo == "Retiro") {
+                    Cuenta* cuenta = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuenta);
+                    if (cuenta) {
+                        cuenta->saldo += ultimaTransaccion.monto;  // Deshacer el retiro
+                        cout << "Retiro de $" << ultimaTransaccion.monto << " deshecho en cuenta " << ultimaTransaccion.numeroCuenta << ".\n";
+                    }
+                } else if (ultimaTransaccion.tipo == "Transferencia") {
+                    // Deshacer una transferencia
+                    Cuenta* cuentaOrigen = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuentaOrigen);
+                    Cuenta* cuentaDestino = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuentaDestino);
+                    if (cuentaOrigen && cuentaDestino) {
+                        cuentaOrigen->saldo += ultimaTransaccion.monto;  // Revertir la transferencia
+                        cuentaDestino->saldo -= ultimaTransaccion.monto;
+                        cout << "Transferencia de $" << ultimaTransaccion.monto
+                            << " deshecha entre cuentas " << ultimaTransaccion.numeroCuentaOrigen
+                            << " y " << ultimaTransaccion.numeroCuentaDestino << ".\n";
+                    }
+                }
+            } else {
+                cout << "No hay operaciones recientes para deshacer.\n";
             }
-        } else if (ultimaTransaccion.tipo == "Retiro") {
-            Cuenta* cuenta = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuenta);
-            if (cuenta) {
-                cuenta->saldo += ultimaTransaccion.monto;  // Deshacer el retiro
-                cout << "Retiro de $" << ultimaTransaccion.monto << " deshecho en cuenta " << ultimaTransaccion.numeroCuenta << ".\n";
+            break;
             }
-        } else if (ultimaTransaccion.tipo == "Transferencia") {
-            // Deshacer una transferencia
-            Cuenta* cuentaOrigen = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuentaOrigen);
-            Cuenta* cuentaDestino = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuentaDestino);
-            if (cuentaOrigen && cuentaDestino) {
-                cuentaOrigen->saldo += ultimaTransaccion.monto;  // Revertir la transferencia
-                cuentaDestino->saldo -= ultimaTransaccion.monto;
-                cout << "Transferencia de $" << ultimaTransaccion.monto
-                     << " deshecha entre cuentas " << ultimaTransaccion.numeroCuentaOrigen
-                     << " y " << ultimaTransaccion.numeroCuentaDestino << ".\n";
-            }
-        }
-    } else {
-        cout << "No hay operaciones recientes para deshacer.\n";
-    }
-    break;
-}
 
             case 7: {
-    // Ver relaciones entre cuentas
-    int numeroCuenta;
-    cout << "Ingrese el número de cuenta para ver sus relaciones: ";
-    cin >> numeroCuenta;
+                // Ver relaciones entre cuentas
+                int numeroCuenta;
+                cout << "Ingrese el nï¿½mero de cuenta para ver sus relaciones: ";
+                cin >> numeroCuenta;
 
-    // Mostrar las relaciones usando el grafo
-    grafo.mostrarRelaciones(numeroCuenta);
-    break;
-}
+                // Mostrar las relaciones usando el grafo
+                grafo.mostrarRelaciones(numeroCuenta);
+                break;
+            }
 
             case 8:
                 // Salir
                 cout << "Saliendo del sistema...\n";
                 return 0;
             default:
-                cout << "Opción no válida.\n";
+                cout << "Opciï¿½n no vï¿½lida.\n";
         }
     }
 }
