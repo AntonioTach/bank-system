@@ -12,17 +12,18 @@ class Usuario {
 public:
     string nombre;
     string direccion;
+    string contrasena;
     vector<Cuenta*> cuentas;  // Un usuario puede tener varias cuentas
 
     // Constructor
-    Usuario(string nombre, string direccion) : nombre(nombre), direccion(direccion) {}
+    Usuario(string nombre, string direccion, string contrasena) : nombre(nombre), direccion(direccion), contrasena(contrasena) {}
 
-    // Método para agregar una cuenta al usuario
+    // Metodo para agregar una cuenta al usuario
     void agregarCuenta(Cuenta* cuenta) {
         cuentas.push_back(cuenta);
     }
 
-    // Método para leer monto y fecha desde la entrada estándar
+    // Metodo para leer monto y fecha desde la entrada estándar
     void leerMontoYFecha(double& monto, string& fecha) {
         cout << "Ingrese monto: ";
         cin >> monto;
@@ -33,18 +34,16 @@ public:
     // Método para leer el número de cuenta desde la entrada estándar
     int leerNumeroCuenta() {
         int numeroCuenta;
-        cout << "Ingrese número de cuenta: ";
+        cout << "Ingrese numero de cuenta: ";
         cin >> numeroCuenta;
         return numeroCuenta;
     }
 
-    // Método para abrir una nueva cuenta
+    // Metodo para abrir una nueva cuenta
     void abrirCuenta() {
         int numeroCuenta = leerNumeroCuenta();
         double saldoInicial;
-        cout << "Ingrese saldo inicial: ";
-        cin >> saldoInicial;
-        Cuenta* nuevaCuenta = new Cuenta(numeroCuenta, saldoInicial);
+        Cuenta* nuevaCuenta = new Cuenta(numeroCuenta, 0);
         agregarCuenta(nuevaCuenta);
         cout << "Cuenta creada exitosamente.\n";
     }
@@ -56,6 +55,48 @@ public:
             cout << "Cuenta No. " << cuenta->numeroCuenta << " con saldo $" << cuenta->obtenerSaldo() << endl;
         }
     }
+
+    // Metodo para verificar la contraseña
+    bool verificarContrasena(const string& contrasenaIngresada) const {
+        return contrasena == contrasenaIngresada;
+    }
+
+    // Funciones static para manejar usuarios
+    static void cargarUsuariosDesdeArchivo(vector<Usuario*>& usuarios) {
+        ifstream archivo("usuarios.txt");
+        if (!archivo.is_open()) {
+            cerr << "Error al abrir el archivo de usuarios.\n";
+            return;
+        }
+        string nombre, direccion, contrasena;
+        while (getline(archivo, nombre) && getline(archivo, direccion) && getline(archivo, contrasena)) {
+            Usuario* usuario = new Usuario(nombre, direccion, contrasena);
+            usuarios.push_back(usuario);
+        }
+        archivo.close();
+    }
+
+    static void guardarUsuariosEnArchivo(const vector<Usuario*>& usuarios) {
+        ofstream archivo("usuarios.txt");
+        if (!archivo.is_open()) {
+            cerr << "Error al guardar el archivo de usuarios.\n";
+            return;
+        }
+        for (const auto& usuario : usuarios) {
+            archivo << usuario->nombre << "\n";
+            archivo << usuario->direccion << "\n";
+        }
+        archivo.close();
+    }
+
+    static Usuario* buscarUsuarioLineal(const vector<Usuario*>& usuarios, const string& nombre, const string& contrasenaIngresada) {
+    for (Usuario* usuario : usuarios) {
+        if (usuario->nombre == nombre && usuario->verificarContrasena(contrasenaIngresada)) {
+            return usuario;
+        }
+    }
+    return nullptr; // Usuario no encontrado o contraseña incorrecta
+}
 };
 
 #endif // USUARIO_H

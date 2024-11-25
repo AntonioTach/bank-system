@@ -3,6 +3,8 @@
 
 #include <string>
 #include <iostream>
+#include "Pila.h"
+
 using namespace std;
 
 // Clase para manejar transacciones
@@ -19,7 +21,7 @@ public:
     Transaccion(const string& tipo, double monto, const string& fecha, int numeroCuenta, int numeroCuentaOrigen = 0, int numeroCuentaDestino = 0)
         : tipo(tipo), monto(monto), fecha(fecha), numeroCuenta(numeroCuenta), numeroCuentaOrigen(numeroCuentaOrigen), numeroCuentaDestino(numeroCuentaDestino) {}
 
-    // Método para mostrar la transacción
+    // Método para mostrar la transaccion
     void mostrarTransaccion() const {
         cout << tipo << ": $" << monto << " en fecha " << fecha;
         if (tipo == "Transferencia") {
@@ -27,6 +29,16 @@ public:
         }
         cout << endl;
     }
+
+    void deshacerUltimaOperacion(Pila<Transaccion>& pila){
+    if (!pila.estaVacia()) {
+        Transaccion t = pila.desapilar();  // Obtener la �ltima transacci�n
+        // Deshacer la operaci�n seg�n el tipo de transacci�n (deposici�n, retiro, etc.)
+        cout << "Operaci�n deshecha: " << t.tipo << " de $" << t.monto << endl;
+    } else {
+        cout << "No hay operaciones recientes para deshacer.\n";
+    }
+}
 };
 
 #endif // TRANSACCION_H
