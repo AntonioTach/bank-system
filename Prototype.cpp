@@ -151,48 +151,26 @@ void deshacerUltimaOperacion(Pila<Transaccion>& pila){
 void mostrarMenu(){
     cout << "\n=== Menu Bancario ===\n";
     cout << "1. Abrir cuenta\n";
-    cout << "2. Realizar dep�sito\n";
+    cout << "2. Realizar deposito\n";
     cout << "3. Realizar retiro\n";
     cout << "4. Transferir dinero\n";
     cout << "5. Ver historial de transacciones\n";
-    cout << "6. Deshacer �ltima operaci�n\n";
+    cout << "6. Deshacer ultima operacion\n";
     cout << "7. Ver relaciones entre cuentas\n";
     cout << "8. Salir\n";
-    cout << "Seleccione una opci�n: ";
-}
-
-// Funcion principal
-int main() {
-    // menu();
-    // TEST MODULOS
-    // Crear un usuario
-    Usuario usuario("Juan Perez", "Calle Falsa 123");
-
-    // Crear una cuenta y agregarla al usuario
-    Cuenta* cuenta = new Cuenta(1001, 500.0); // Número de cuenta: 1001, Saldo inicial: 500
-    usuario.agregarCuenta(cuenta);
-
-    // Realizar un depósito en la cuenta
-    cuenta->depositar(200.0, "23/11/2024");
-
-    // Mostrar las cuentas del usuario y su saldo actualizado
-    usuario.mostrarCuentas();
-
-    delete cuenta;
-
-    return 0;
+    cout << "Seleccione una opcion: ";
 }
 
 int menu() { // MENU DE OPCIONES
     vector<Usuario*> usuarios;
     Pila<Transaccion> pilaTransacciones;
-    Grafo grafo;
+    Grafo* grafo = new Grafo();
 
-    Usuario* usuario = new Usuario("Usuario", "Ejemplo default");
-    Cuenta* cuenta1 = new Cuenta(1001, 500.0);
-    Cuenta* cuenta2 = new Cuenta(1002, 300.0);
-    usuario->agregarCuenta(cuenta1);
-    usuario->agregarCuenta(cuenta2);
+
+    //cuenta agregada por default
+    Usuario* usuario = new Usuario("Juan Perez", "Calle falsa");
+    Cuenta* cuenta = new Cuenta(0001, 500.0);
+    usuario->agregarCuenta(cuenta);
 
     int opcion;
     while (true) {
@@ -201,23 +179,14 @@ int menu() { // MENU DE OPCIONES
         switch (opcion) {
             case 1: {
                 // Abrir cuenta
-                int numeroCuenta;
-                double saldoInicial;
-                cout << "Ingrese n�mero de cuenta: ";
-                cin >> numeroCuenta;
-                cout << "Ingrese saldo inicial: ";
-                cin >> saldoInicial;
-                Cuenta* nuevaCuenta = new Cuenta(numeroCuenta, saldoInicial);
-                usuario->agregarCuenta(nuevaCuenta);
-                cout << "Cuenta creada exitosamente.\n";
-                break;
+                usuario->abrirCuenta();
             }
             case 2: {
-                // Realizar dep�sito
+                // Realizar deposito
                 int numeroCuenta;
                 double monto;
                 string fecha;
-                cout << "Ingrese n�mero de cuenta: ";
+                cout << "Ingrese numero de cuenta: ";
                 cin >> numeroCuenta;
                 cout << "Ingrese monto a depositar: ";
                 cin >> monto;
@@ -226,10 +195,11 @@ int menu() { // MENU DE OPCIONES
                 Cuenta* cuenta = buscarCuentaBinaria(usuario->cuentas, numeroCuenta);
                 if (cuenta != nullptr) {
                     cuenta->depositar(monto, fecha);
-                    cout << "Dep�sito realizado.\n";
+                    cout << "Deposito realizado.\n";
                 } else {
                     cout << "Cuenta no encontrada.\n";
                 }
+
                 break;
             }
             case 3: {
@@ -237,7 +207,7 @@ int menu() { // MENU DE OPCIONES
                 int numeroCuenta;
                 double monto;
                 string fecha;
-                cout << "Ingrese n�mero de cuenta: ";
+                cout << "Ingrese numero de cuenta: ";
                 cin >> numeroCuenta;
                 cout << "Ingrese monto a retirar: ";
                 cin >> monto;
@@ -253,28 +223,45 @@ int menu() { // MENU DE OPCIONES
                 break;
             }
             case 4: {
-                // Transferir dinero
-                int numeroCuentaOrigen, numeroCuentaDestino;
-                double monto;
-                string fecha;
-                cout << "Ingrese n�mero de cuenta origen: ";
-                cin >> numeroCuentaOrigen;
-                cout << "Ingrese n�mero de cuenta destino: ";
-                cin >> numeroCuentaDestino;
-                cout << "Ingrese monto a transferir: ";
-                cin >> monto;
-                cout << "Ingrese fecha (dd/mm/aaaa): ";
-                cin >> fecha;
+    // Transferir dinero
+    int numeroCuentaOrigen, numeroCuentaDestino;
+    double monto;
+    string fecha;
+    cout << "Ingrese numero de cuenta origen: ";
+    cin >> numeroCuentaOrigen;
+    cout << "Ingrese numero de cuenta destino: ";
+    cin >> numeroCuentaDestino;
+    cout << "Ingrese monto a transferir: ";
+    cin >> monto;
+    cout << "Ingrese fecha (dd/mm/aaaa): ";
+    cin >> fecha;
 
-                Cuenta* cuentaOrigen = buscarCuentaBinaria(usuario->cuentas, numeroCuentaOrigen);
-                Cuenta* cuentaDestino = buscarCuentaBinaria(usuario->cuentas, numeroCuentaDestino);
-                if (cuentaOrigen != nullptr && cuentaDestino != nullptr) {
-                    cuentaOrigen->transferir(monto, cuentaDestino, fecha);
-                } else {
-                    cout << "Una o ambas cuentas no existen.\n";
-                }
-                break;
-            }
+    // Buscar las cuentas de origen y destino
+    Cuenta* cuentaOrigen = buscarCuentaBinaria(usuario->cuentas, numeroCuentaOrigen);
+    Cuenta* cuentaDestino = buscarCuentaBinaria(usuario->cuentas, numeroCuentaDestino);
+
+    if (cuentaOrigen != nullptr && cuentaDestino != nullptr) {
+        // Realizar la transferencia
+        cuentaOrigen->transferir(monto, cuentaDestino, fecha);
+
+        // Crear la transacción de transferencia
+        Transaccion transaccion("Transferencia", monto, fecha, numeroCuentaOrigen, numeroCuentaOrigen, numeroCuentaDestino);
+
+
+        // Apilar la transacción para deshacer si es necesario
+        pilaTransacciones.apilar(transaccion);
+
+        // Agregar la relación al grafo
+        grafo->agregarRelacion(cuentaOrigen->numeroCuenta, cuentaDestino->numeroCuenta);
+
+        cout << "Transferencia de $" << monto << " realizada de cuenta " << numeroCuentaOrigen
+             << " a cuenta " << numeroCuentaDestino << " en fecha " << fecha << ".\n";
+    } else {
+        cout << "Una o ambas cuentas no existen.\n";
+    }
+    break;
+}
+
             case 5: {
                 // Ver historial de transacciones
                 for (const auto& cuenta : usuario->cuentas) {
@@ -283,16 +270,16 @@ int menu() { // MENU DE OPCIONES
                 break;
             }
             case 6: {
-            // Deshacer la �ltima operaci�n (�ltima transacci�n)
+            // Deshacer la ultima operacion (ultima transaccion)
             if (!pilaTransacciones.estaVacia()) {
-                Transaccion ultimaTransaccion = pilaTransacciones.desapilar(); // Desapilamos la �ltima transacci�n
+                Transaccion ultimaTransaccion = pilaTransacciones.desapilar(); // Desapilamos la ultima transaccion
 
-                // L�gica para deshacer la operaci�n
+                // Logica para deshacer la operacion
                 if (ultimaTransaccion.tipo == "Deposito") {
                     Cuenta* cuenta = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuenta);
                     if (cuenta) {
-                        cuenta->saldo -= ultimaTransaccion.monto;  // Deshacer el dep�sito
-                        cout << "Dep�sito de $" << ultimaTransaccion.monto << " deshecho en cuenta " << ultimaTransaccion.numeroCuenta << ".\n";
+                        cuenta->saldo -= ultimaTransaccion.monto;  // Deshacer el deposito
+                        cout << "Deposito de $" << ultimaTransaccion.monto << " deshecho en cuenta " << ultimaTransaccion.numeroCuenta << ".\n";
                     }
                 } else if (ultimaTransaccion.tipo == "Retiro") {
                     Cuenta* cuenta = buscarCuentaLineal(usuario->cuentas, ultimaTransaccion.numeroCuenta);
@@ -321,11 +308,11 @@ int menu() { // MENU DE OPCIONES
             case 7: {
                 // Ver relaciones entre cuentas
                 int numeroCuenta;
-                cout << "Ingrese el n�mero de cuenta para ver sus relaciones: ";
+                cout << "Ingrese el numero de cuenta para ver sus relaciones: ";
                 cin >> numeroCuenta;
 
                 // Mostrar las relaciones usando el grafo
-                grafo.mostrarRelaciones(numeroCuenta);
+                grafo->mostrarRelaciones(numeroCuenta);
                 break;
             }
 
@@ -334,8 +321,31 @@ int menu() { // MENU DE OPCIONES
                 cout << "Saliendo del sistema...\n";
                 return 0;
             default:
-                cout << "Opci�n no v�lida.\n";
+                cout << "Opcion no valida.\n";
         }
     }
 }
 
+// Funcion principal
+int main() {
+    menu();
+    /*
+    // TEST MODULOS
+    // Crear un usuario
+    Usuario usuario("Juan Perez", "Calle Falsa 123");
+
+    // Crear una cuenta y agregarla al usuario
+    Cuenta* cuenta = new Cuenta(1001, 500.0); // Número de cuenta: 1001, Saldo inicial: 500
+    usuario.agregarCuenta(cuenta);
+
+    // Realizar un depósito en la cuenta
+    cuenta->depositar(200.0, "23/11/2024");
+
+    // Mostrar las cuentas del usuario y su saldo actualizado
+    usuario.mostrarCuentas();
+
+    delete cuenta;
+
+    return 0;
+    */
+}
