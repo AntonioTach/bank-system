@@ -213,6 +213,15 @@ void menuPrincipal(vector<Usuario*>& usuarios, Usuario*& usuarioActivo, Pila<Tra
                     cerr << "Error: Saldo insuficiente en la cuenta origen.\n";
                 } else {
                     cuentaOrigen->transferir(monto, cuentaDestino, fecha);
+
+                    // Crear la transacción de transferencia
+                    Transaccion transaccion("Transferencia", monto, fecha, numeroCuentaOrigen, numeroCuentaOrigen, numeroCuentaDestino);
+
+                    //apilar la transaccion para deshacer si es necesario
+                    pilaTransacciones.apilar(transaccion);
+
+                    //agregar la relacion al grafo
+                    grafo->agregarRelacion(cuentaOrigen->numeroCuenta,cuentaDestino->numeroCuenta);
                     cout << "Transferencia realizada exitosamente.\n";
                 }
                 break;
